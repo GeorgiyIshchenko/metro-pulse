@@ -1,0 +1,128 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: metropulse-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: metropulse
+      POSTGRES_PASSWORD: metropulse
+      POSTGRES_DB: metropulse_dwh
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d 
+    networks:
+      - metropulse-net
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: metropulse-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.ad
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - ./pgadmin/servers.json:/pgadmin4/servers.json
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - metropulse-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: metropulse-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123456
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"   # S3 endpoint
+      - "9001:9001"   # Web console
+    volumes:
+      - minio_data:/data
+    networks:
+      - metropulse-net
+
+  spark-master:
+    image: bde2020/spark-master:3.3.0-hadoop3.3
+    container_name: metropulse-spark-master
+    restart: unless-stopped
+    environment:
+      - INIT_DAEMON_STEP=setup_spark
+      - HADOOP_CONF_DIR=/spark/conf
+      - AWS_ACCESS_KEY_ID=minio
+      - AWS_SECRET_ACCESS_KEY=minio123456
+    ports:
+      - "7077:7077"   # Spark master
+      - "8080:8080"   # Spark master UI
+    volumes:
+      - ./spark/apps:/opt/spark-apps
+      - ./spark/logs:/spark/spark-events
+      - ./spark/conf:/spark/conf
+    networks:
+      - metropulse-net
+
+  spark-worker:
+    image: bde2020/spark-worker:3.3.0-hadoop3.3
+    container_name: metropulse-spark-worker-1
+    restart: unless-stopped
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+      - HADOOP_CONF_DIR=/spark/conf
+      - AWS_ACCESS_KEY_ID=minio
+      - AWS_SECRET_ACCESS_KEY=minio123456
+    ports:
+      - "8081:8081"   # Spark worker UI
+    volumes:
+      - ./spark/apps:/opt/spark-apps
+      - ./spark/logs:/spark/spark-events
+      - ./spark/conf:/spark/conf
+    networks:
+      - metropulse-net
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8
+    container_name: metropulse-clickhouse
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_DB: metropulse
+      CLICKHOUSE_USER: metropulse
+      CLICKHOUSE_PASSWORD: metropulse
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    ports:
+      - "8123:8123" 
+      - "9009:9009"  
+    networks:
+      - metropulse-net
+
+  clickhouse-ui:
+    image: ghcr.io/caioricciuti/ch-ui:latest
+    container_name: metropulse-clickhouse-ui
+    restart: unless-stopped
+    ports:
+      - "5521:5521"
+    environment:
+      VITE_CLICKHOUSE_URL: "http://localhost:8123"
+      VITE_CLICKHOUSE_USER: "metropulse"
+      VITE_CLICKHOUSE_PASS: "metropulse"
+    depends_on:
+      - clickhouse
+    networks:
+      - metropulse-net
+      
+networks:
+  metropulse-net:
+    driver: bridge
+
+volumes:
+  pg_data:
+  minio_data:
+  clickhouse_data:
