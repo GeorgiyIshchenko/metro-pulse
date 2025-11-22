@@ -13,7 +13,7 @@ CREATE TABLE dwh.dim_date (
 );
 
 CREATE TABLE dwh.dim_time (
-    time_key        INTEGER PRIMARY KEY,   -- формат HHMMSS
+    time_key        INTEGER PRIMARY KEY,   
     full_time       TIME        NOT NULL,
     hour            SMALLINT    NOT NULL,
     minute          SMALLINT    NOT NULL,
@@ -23,7 +23,6 @@ CREATE TABLE dwh.dim_time (
 CREATE TABLE dwh.dim_user (
     user_sk         BIGSERIAL   PRIMARY KEY,
     user_id_nat     VARCHAR(64) NOT NULL,          
-    user_uuid       UUID,                          
     email           VARCHAR(255),
     phone           VARCHAR(50),
     full_name       VARCHAR(255),
@@ -100,3 +99,25 @@ CREATE TABLE dwh.dim_route (
     CONSTRAINT uq_dim_route_bk_valid_from UNIQUE (route_id_nat, valid_from)
 );
 
+CREATE OR REPLACE FUNCTION dwh.trg_dim_route_scd2()
+RETURNS trigger AS
+$$
+BEGIN
+    UPDATE dwh.dim_route
+    SET valid_to  = NEW.valid_from - INTERVAL '1 day',
+        is_current = FALSE
+    WHERE route_id_nat = NEW.route_id_nat
+      AND is_current   = TRUE
+      AND valid_to     >= NEW.valid_from;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS tr_dim_route_scd2 ON dwh.dim_route;
+
+CREATE TRIGGER tr_dim_route_scd2
+BEFORE INSERT ON dwh.dim_route
+FOR EACH ROW
+WHEN (NEW.is_current IS TRUE)
+EXECUTE FUNCTION dwh.trg_dim_route_scd2();
