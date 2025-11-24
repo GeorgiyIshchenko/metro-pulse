@@ -22,7 +22,17 @@ def parse_args():
 
 
 def read_staging_table(spark, args, jdbc_props, table_name):
-    df = spark.read.jdbc(config.POSTGRES_JDBC_URL, table_name, properties=jdbc_props)
+    df = (
+        spark.read
+        .format("jdbc")
+        .option("url", config.POSTGRES_JDBC_URL)
+        .option("dbtable", table_name)
+        .option("user", config.POSTGRES_USER)
+        .option("password", config.POSTGRES_PASSWORD)
+        .option("driver", "org.postgresql.Driver")
+        .option("fetchsize", 10000)
+        .load()
+    )
     if args.batch_id:
         df = df.filter(F.col("etl_batch_id") == F.lit(args.batch_id))
     return df
@@ -73,7 +83,6 @@ def load_fact_trip(spark, args, jdbc_props):
     )
 
     fact_trip = trips_enriched.select(
-        F.monotonically_increasing_id().alias("trip_id"),
         F.col("u.user_sk").alias("user_sk"),
         F.col("r.route_sk").alias("route_sk"),
         F.col("v.vehicle_sk").alias("vehicle_sk"),
@@ -131,7 +140,6 @@ def load_fact_payment(spark, args, jdbc_props):
     )
 
     fact_payment = pay_enriched.select(
-        F.monotonically_increasing_id().alias("payment_id"),
         F.col("u.user_sk").alias("user_sk"),
         F.col("fp.fare_product_sk").alias("fare_product_sk"),
         "payment_date_key",
@@ -184,7 +192,6 @@ def load_fact_vehicle_position(spark, args, jdbc_props):
     )
 
     fact_vp = vp_enriched.select(
-        F.monotonically_increasing_id().alias("vehicle_position_id"),
         F.col("v.vehicle_sk").alias("vehicle_sk"),
         F.col("r.route_sk").alias("route_sk"),
         "date_key",

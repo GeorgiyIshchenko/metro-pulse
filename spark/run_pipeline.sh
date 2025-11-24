@@ -10,3 +10,4 @@ docker exec -it metropulse-spark-master /spark/bin/spark-submit --master spark:/
 
 docker exec -it metropulse-spark-master /spark/bin/spark-submit --master spark://spark-master:7077 /opt/spark-apps/dwh_load_facts.py
 
+docker exec -it metropulse-spark-master /spark/bin/spark-submit --master spark://spark-master:7077 /opt/spark-apps/build_trip_mart_clickhouse.py --reload-all

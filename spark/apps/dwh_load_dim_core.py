@@ -22,8 +22,17 @@ def parse_args():
 
 
 def read_staging_table(spark, args, jdbc_props, table_name):
-    df = spark.read.jdbc(config.POSTGRES_JDBC_URL,
-                         table_name, properties=jdbc_props)
+    df = (
+        spark.read
+        .format("jdbc")
+        .option("url", config.POSTGRES_JDBC_URL)
+        .option("dbtable", table_name)
+        .option("user", config.POSTGRES_USER)
+        .option("password", config.POSTGRES_PASSWORD)
+        .option("driver", "org.postgresql.Driver")
+        .option("fetchsize", 10000)
+        .load()
+    )
     if args.batch_id:
         df = df.filter(F.col("etl_batch_id") == F.lit(args.batch_id))
     return df
