@@ -6,7 +6,7 @@
 
 [UI](http://localhost:5050)
 
-`admin@metropulse.local:admin`
+`admin@admin.ad:admin`
 
 ## MinIO
 
