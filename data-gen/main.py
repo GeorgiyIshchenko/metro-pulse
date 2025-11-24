@@ -41,8 +41,6 @@ def random_dates(start_ts: datetime, end_ts: datetime, n: int) -> np.ndarray:
     return np.array([start_ts + timedelta(seconds=float(s)) for s in rand_secs])
 
 
-# ============ FAIR PRODUCTS ============
-
 def generate_fare_products() -> pd.DataFrame:
     rows = [
         ("FARE_SINGLE", "Single ride", "single",
@@ -71,8 +69,6 @@ def generate_fare_products() -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
-# ============ USERS ============
-
 def generate_users(num_users: int, start_date: date, days: int) -> pd.DataFrame:
     user_ids = [f"USER-{i:06d}" for i in range(1, num_users + 1)]
     base_ts_start = datetime.combine(
@@ -85,7 +81,6 @@ def generate_users(num_users: int, start_date: date, days: int) -> pd.DataFrame:
 
     data = []
     for i, user_id in enumerate(user_ids):
-        uid = uuid.uuid4()
         email = f"user{i+1}@example.com"
         phone = f"+7-900-{random.randint(1000000, 9999999):07d}"
         full_name = f"User {i+1}"
@@ -97,7 +92,6 @@ def generate_users(num_users: int, start_date: date, days: int) -> pd.DataFrame:
         data.append(
             dict(
                 user_id=user_id,
-                user_uuid=str(uid),  # важный фикс для pyarrow
                 email=email,
                 phone=phone,
                 full_name=full_name,
@@ -112,11 +106,9 @@ def generate_users(num_users: int, start_date: date, days: int) -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
-# ============ STOPS ============
-
 def generate_stops(num_stops: int) -> pd.DataFrame:
     stop_ids = [f"STOP-{i:04d}" for i in range(1, num_stops + 1)]
-    base_lat, base_lon = 55.75, 37.60  # условный город
+    base_lat, base_lon = 55.75, 37.60
     data = []
     now = datetime.now(UTC)
     for i, stop_id in enumerate(stop_ids):
@@ -141,8 +133,6 @@ def generate_stops(num_stops: int) -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
-# ============ ROUTES ============
-
 def generate_routes(num_routes: int, stops_df: pd.DataFrame, fare_products_df: pd.DataFrame):
     route_ids = [f"ROUTE-{i:03d}" for i in range(1, num_routes + 1)]
     route_types = ["bus", "tram", "metro"]
@@ -158,7 +148,6 @@ def generate_routes(num_routes: int, stops_df: pd.DataFrame, fare_products_df: p
         route_name = f"{route_type.title()} Line {i+1}"
         description = f"Synthetic {route_type} route {i+1}"
 
-        # Случайный набор остановок для этого маршрута
         n_stops_on_route = random.randint(10, min(25, len(stop_ids)))
         route_stop_ids = random.sample(stop_ids, n_stops_on_route)
         route_stop_ids_sorted = sorted(route_stop_ids)
@@ -187,7 +176,7 @@ def generate_routes(num_routes: int, stops_df: pd.DataFrame, fare_products_df: p
                 route_pattern_hash=pattern_hash,
                 default_fare_product_id=default_fare_id,
                 valid_from_ts=now - timedelta(days=365),
-                valid_to_ts=pd.NaT,  # datetime-колонка, а не object
+                valid_to_ts=pd.NaT,
                 is_active=True,
                 src_system="oltp",
                 src_created_at=now - timedelta(days=365),
@@ -199,8 +188,6 @@ def generate_routes(num_routes: int, stops_df: pd.DataFrame, fare_products_df: p
     route_stops_df = pd.DataFrame(data_route_stops)
     return routes_df, route_stops_df
 
-
-# ============ VEHICLES ============
 
 def generate_vehicles(num_vehicles: int, routes_df: pd.DataFrame) -> pd.DataFrame:
     vehicle_ids = [f"VEH-{i:05d}" for i in range(1, num_vehicles + 1)]
@@ -228,7 +215,6 @@ def generate_vehicles(num_vehicles: int, routes_df: pd.DataFrame) -> pd.DataFram
                 src_system="oltp",
                 src_created_at=now - timedelta(days=200),
                 src_updated_at=now - timedelta(days=1),
-                # служебное поле для генерации позиций
                 home_route_id=home_routes[i],
             )
         )
@@ -236,8 +222,6 @@ def generate_vehicles(num_vehicles: int, routes_df: pd.DataFrame) -> pd.DataFram
     df = pd.DataFrame(data)
     return df
 
-
-# ============ TRIPS ============
 
 def generate_trips(users_df: pd.DataFrame,
                    routes_df: pd.DataFrame,
@@ -339,8 +323,6 @@ def generate_trips(users_df: pd.DataFrame,
     return df
 
 
-# ============ PAYMENTS ============
-
 def generate_payments(trips_df: pd.DataFrame) -> pd.DataFrame:
     completed_trips = trips_df[trips_df["trip_status"] == "completed"].copy()
     mask_paid = np.random.rand(len(completed_trips)) < 0.95
@@ -377,8 +359,6 @@ def generate_payments(trips_df: pd.DataFrame) -> pd.DataFrame:
 
     return pd.DataFrame(data)
 
-
-# ============ VEHICLE POSITIONS ============
 
 def generate_vehicle_positions(vehicles_df: pd.DataFrame,
                                stops_df: pd.DataFrame,
@@ -458,11 +438,15 @@ def generate_vehicle_positions(vehicles_df: pd.DataFrame,
     return df
 
 
-# ============ IO ============
-
 def write_parquet(df: pd.DataFrame, out_dir: Path, name: str):
     file_path = out_dir / f"{name}.parquet"
-    df.to_parquet(file_path, index=False)
+    df.to_parquet(
+        file_path,
+        engine="pyarrow",
+        index=False,
+        coerce_timestamps="ms",
+        allow_truncated_timestamps=True
+    )
     print(f"Wrote {len(df):,} rows to {file_path}")
 
 
@@ -499,7 +483,6 @@ def main():
         freq_seconds=10,
     )
 
-    # убираем служебную колонку перед сохранением в stg_vehicle
     vehicles_to_write = vehicles_df.drop(columns=["home_route_id"])
 
     print("Writing Parquet files...")

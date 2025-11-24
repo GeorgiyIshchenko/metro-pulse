@@ -1,6 +1,5 @@
 CREATE TABLE staging.stg_user (
     user_id            VARCHAR(64) NOT NULL,
-    user_uuid          UUID,
     email              VARCHAR(255),
     phone              VARCHAR(50),
     full_name          VARCHAR(255),

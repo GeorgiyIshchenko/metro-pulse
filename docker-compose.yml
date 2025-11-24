@@ -48,7 +48,11 @@ services:
       - metropulse-net
 
   spark-master:
-    image: bde2020/spark-master:3.3.0-hadoop3.3
+    build:
+      context: .
+      dockerfile: spark/Dockerfile
+      args:
+        BASE_IMAGE: bde2020/spark-master:3.3.0-hadoop3.3
     container_name: metropulse-spark-master
     restart: unless-stopped
     environment:
@@ -67,7 +71,11 @@ services:
       - metropulse-net
 
   spark-worker:
-    image: bde2020/spark-worker:3.3.0-hadoop3.3
+    build:
+      context: .
+      dockerfile: spark/Dockerfile
+      args:
+        BASE_IMAGE: bde2020/spark-worker:3.3.0-hadoop3.3
     container_name: metropulse-spark-worker-1
     restart: unless-stopped
     depends_on:

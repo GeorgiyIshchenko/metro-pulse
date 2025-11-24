@@ -1,6 +1,5 @@
 <?xml version="1.0"?>
 <configuration>
-    <!-- S3A (MinIO) настройки -->
     <property>
         <name>fs.s3a.endpoint</name>
         <value>http://minio:9000</value>
@@ -21,7 +20,6 @@
         <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
     </property>
 
-    <!-- Можно хранить и ключи тут; для прототипа допустимо -->
     <property>
         <name>fs.s3a.access.key</name>
         <value>minio</value>
