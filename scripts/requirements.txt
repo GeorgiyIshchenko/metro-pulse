@@ -1,0 +1,5 @@
+clickhouse-connect==0.7.9
+pandas==2.2.2
+plotly==5.23.0
+psycopg[binary]==3.3.2
+SQLAlchemy==2.0.36

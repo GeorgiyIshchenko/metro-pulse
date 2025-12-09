@@ -31,7 +31,24 @@ def parse_args():
                         help="Number of vehicles to generate.")
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed.")
+    parser.add_argument("--profile", choices=["full", "test"], default="full",
+                        help="Use 'test' for a small quick dataset.")
     return parser.parse_args()
+
+
+def apply_profile(args):
+    if args.profile != "test":
+        return args
+
+    # Keep the test run light and fast; only override if defaults are heavy.
+    if args.output_dir == "data":
+        args.output_dir = "data-test"
+    args.days = min(args.days, 1)
+    args.num_users = min(args.num_users, 50)
+    args.num_routes = min(args.num_routes, 5)
+    args.num_stops = min(args.num_stops, 15)
+    args.num_vehicles = min(args.num_vehicles, 5)
+    return args
 
 
 def random_dates(start_ts: datetime, end_ts: datetime, n: int) -> np.ndarray:
@@ -452,6 +469,7 @@ def write_parquet(df: pd.DataFrame, out_dir: Path, name: str):
 
 def main():
     args = parse_args()
+    args = apply_profile(args)
     random.seed(args.seed)
     np.random.seed(args.seed)
 

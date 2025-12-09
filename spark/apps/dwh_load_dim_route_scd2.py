@@ -135,6 +135,15 @@ def main():
         F.current_timestamp().alias("etl_loaded_at"),
     )
 
+    # Drop duplicates already present in dim_route for same (route_id_nat, valid_from)
+    dim_pk = dim.select("route_id_nat", "valid_from")
+    new_versions = new_versions.join(
+        dim_pk,
+        (new_versions.route_id_nat == dim_pk.route_id_nat) &
+        (new_versions.valid_from == dim_pk.valid_from),
+        how="left_anti",
+    )
+
     (
         new_versions.write
         .mode("append")
@@ -148,4 +157,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

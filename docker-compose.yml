@@ -3,6 +3,7 @@ services:
     image: postgres:16
     container_name: metropulse-postgres
     restart: unless-stopped
+    command: ["postgres", "-c", "max_wal_size=2GB", "-c", "checkpoint_timeout=15min"]
     environment:
       POSTGRES_USER: metropulse
       POSTGRES_PASSWORD: metropulse
@@ -53,6 +54,7 @@ services:
       dockerfile: spark/Dockerfile
       args:
         BASE_IMAGE: bde2020/spark-master:3.3.0-hadoop3.3
+    platform: linux/amd64
     container_name: metropulse-spark-master
     restart: unless-stopped
     environment:
@@ -76,6 +78,7 @@ services:
       dockerfile: spark/Dockerfile
       args:
         BASE_IMAGE: bde2020/spark-worker:3.3.0-hadoop3.3
+    platform: linux/amd64
     container_name: metropulse-spark-worker-1
     restart: unless-stopped
     depends_on:
@@ -111,20 +114,21 @@ services:
     networks:
       - metropulse-net
 
-  clickhouse-ui:
-    image: ghcr.io/caioricciuti/ch-ui:latest
-    container_name: metropulse-clickhouse-ui
-    restart: unless-stopped
-    ports:
-      - "5521:5521"
-    environment:
-      VITE_CLICKHOUSE_URL: "http://metropulse-clickhouse:8123"
-      VITE_CLICKHOUSE_USER: "default"
-      VITE_CLICKHOUSE_PASS: "default"
-    depends_on:
-      - clickhouse
-    networks:
-      - metropulse-net
+  # Ui is not working =(
+  # clickhouse-ui:
+  #   image: ghcr.io/caioricciuti/ch-ui:latest
+  #   container_name: metropulse-clickhouse-ui
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5521:5521"
+  #   environment:
+  #     VITE_CLICKHOUSE_URL: "http://metropulse-clickhouse:8123"
+  #     VITE_CLICKHOUSE_USER: "metropulse"
+  #     VITE_CLICKHOUSE_PASS: "metropulse"
+  #   depends_on:
+  #     - clickhouse
+  #   networks:
+  #     - metropulse-net
       
 networks:
   metropulse-net:
