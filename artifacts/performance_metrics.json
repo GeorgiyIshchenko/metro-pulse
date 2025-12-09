@@ -1,0 +1,6 @@
+{
+  "postgres_query_seconds": 0.18661741600226378,
+  "clickhouse_query_seconds": 0.02660229100001743,
+  "postgres_rows": 4409,
+  "clickhouse_rows": 4407
+}
